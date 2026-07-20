@@ -45,8 +45,13 @@ def analyze_intent(state: ConversationState) -> ConversationState:
 
 def generate_reply(state: ConversationState) -> ConversationState:
     """调用 LLM 生成回复, 注入人格 + 历史 + 记忆."""
-    llm = _get_llm()
+    resp = _get_llm().invoke(build_reply_messages(state))
+    reply = _content_to_text(resp.content).strip()
+    return {"reply": reply}
 
+
+def build_reply_messages(state: ConversationState) -> list:
+    """构造回复所需的消息，以便普通与流式调用复用同一上下文。"""
     memory_block = format_memories(state.get("memories", []))
     intent = state.get("intent", {})
     emotion_hint = intent.get("emotion", "neutral")
@@ -69,10 +74,29 @@ def generate_reply(state: ConversationState) -> ConversationState:
             lc_messages.append(AIMessage(content=m["content"]))
 
     lc_messages.append(HumanMessage(content=state["user_message"]))
+    return lc_messages
 
-    resp = llm.invoke(lc_messages)
-    reply = resp.content.strip()
-    return {"reply": reply}
+
+
+def stream_reply(state: ConversationState):
+    """逐片段产出 LLM 回复文本。"""
+    for chunk in _get_llm().stream(build_reply_messages(state)):
+        text = _content_to_text(chunk.content)
+        if text:
+            yield text
+
+
+def _content_to_text(content: object) -> str:
+    """兼容 OpenAI 兼容接口可能返回的字符串或内容块列表。"""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            item.get("text", "")
+            for item in content
+            if isinstance(item, dict) and isinstance(item.get("text"), str)
+        )
+    return ""
 
 
 def maybe_write_memory(state: ConversationState) -> ConversationState:

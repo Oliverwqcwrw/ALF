@@ -130,6 +130,10 @@ curl -X POST http://localhost:8000/chat \
   -d '{"message": "我今天有点累"}'
 ```
 
+启动后访问 `http://127.0.0.1:8000`，即可使用浏览器聊天界面。
+
+浏览器界面默认使用 `POST /chat/stream` 的 Server-Sent Events 流式响应；如需一次性拿到完整文本，继续使用 `POST /chat`。
+
 代码内调用:
 
 ```python

@@ -7,6 +7,7 @@ from typing import Deque
 
 from .config import settings
 from .graph import app_graph
+from .graph.nodes import analyze_intent, maybe_write_memory, retrieve_memories, stream_reply
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +49,20 @@ def reset(user_id: str | None = None) -> None:
 
 
 def stream(user_message: str, user_id: str | None = None):
-    """流式输出回复. 简单起见这里 stream graph 事件."""
+    """流式输出回复文本，并在完成后更新会话与长期记忆。"""
     uid = user_id or settings.alf_user_id
     history = list(_get_history(uid))
     state = {"user_id": uid, "user_message": user_message, "messages": history}
-    for chunk in app_graph.stream(state):
-        if "generate_reply" in chunk and "reply" in chunk["generate_reply"]:
-            _get_history(uid).append({"role": "user", "content": user_message})
-            _get_history(uid).append(
-                {"role": "assistant", "content": chunk["generate_reply"]["reply"]}
-            )
-            yield chunk["generate_reply"]["reply"]
+    state.update(retrieve_memories(state))
+    state.update(analyze_intent(state))
+
+    reply_parts: list[str] = []
+    for text in stream_reply(state):
+        reply_parts.append(text)
+        yield text
+
+    reply = "".join(reply_parts).strip()
+    state["reply"] = reply
+    maybe_write_memory(state)
+    _get_history(uid).append({"role": "user", "content": user_message})
+    _get_history(uid).append({"role": "assistant", "content": reply})

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#173d38" />
+    <title>小奥 · 在这陪你</title>
+    <style>
+      :root {
+        --ink: #183f3a;
+        --ink-deep: #102d29;
+        --paper: #f6f1e6;
+        --paper-soft: #fcf9f1;
+        --clay: #d87855;
+        --mist: #c9d8c5;
+        --muted: #69756b;
+        --line: rgba(24, 63, 58, 0.16);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink-deep);
+        background:
+          radial-gradient(circle at 10% 4%, rgba(237, 181, 117, 0.18), transparent 26rem),
+          radial-gradient(circle at 98% 95%, rgba(150, 193, 165, 0.18), transparent 30rem),
+          var(--ink);
+        font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+      }
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        content: "";
+        opacity: 0.22;
+        pointer-events: none;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+      }
+      .shell {
+        width: min(1120px, calc(100% - 32px));
+        min-height: min(780px, calc(100vh - 48px));
+        margin: 24px auto;
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        overflow: hidden;
+        border: 1px solid rgba(246, 241, 230, 0.3);
+        border-radius: 24px;
+        box-shadow: 0 28px 80px rgba(5, 21, 18, 0.33);
+      }
+      aside {
+        position: relative;
+        display: flex;
+        min-height: 690px;
+        padding: 32px 28px;
+        flex-direction: column;
+        color: var(--paper);
+        overflow: hidden;
+        background: rgba(12, 43, 39, 0.88);
+      }
+      aside::after {
+        position: absolute;
+        right: -60px;
+        bottom: -74px;
+        width: 210px;
+        height: 210px;
+        content: "";
+        border: 1px solid rgba(246, 241, 230, 0.35);
+        border-radius: 50%;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .moon {
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--paper);
+        border-radius: 50%;
+        box-shadow: inset -7px 0 0 var(--clay);
+      }
+      .brand strong {
+        font-family: Georgia, "Songti SC", serif;
+        font-size: 23px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+      }
+      .eyebrow { margin: 52px 0 10px; color: #c8d5c5; font-size: 11px; letter-spacing: 0.18em; }
+      h1 {
+        max-width: 190px;
+        margin: 0;
+        font-family: Georgia, "Songti SC", serif;
+        font-size: clamp(31px, 3.7vw, 46px);
+        font-weight: 400;
+        line-height: 1.16;
+      }
+      .side-copy { margin: 24px 0 0; color: #dce4d8; font-size: 14px; line-height: 1.8; }
+      .status { margin-top: auto; display: flex; align-items: center; gap: 8px; color: #dce4d8; font-size: 12px; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #9bcd9e; box-shadow: 0 0 0 5px rgba(155, 205, 158, 0.11); }
+      main { display: flex; min-height: 690px; flex-direction: column; background: var(--paper); }
+      .topbar { display: flex; align-items: center; justify-content: space-between; padding: 24px 30px 18px; border-bottom: 1px solid var(--line); }
+      .today { color: var(--muted); font-size: 12px; letter-spacing: 0.07em; }
+      .clear {
+        padding: 7px 0;
+        color: var(--muted);
+        border: 0;
+        border-bottom: 1px solid currentColor;
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        transition: color 160ms ease;
+      }
+      .clear:hover { color: var(--clay); }
+      #messages { flex: 1; padding: 32px 30px 24px; overflow-y: auto; scroll-behavior: smooth; }
+      .welcome { max-width: 520px; padding: 24px; border: 1px solid var(--line); border-radius: 2px 18px 18px 18px; background: var(--paper-soft); animation: rise 500ms both; }
+      .welcome small { display: block; margin-bottom: 12px; color: var(--clay); font-size: 11px; letter-spacing: 0.16em; }
+      .welcome p { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 20px; line-height: 1.65; }
+      .message { max-width: min(84%, 560px); margin: 0 0 20px; padding: 14px 17px; font-size: 15px; line-height: 1.75; animation: rise 260ms both; }
+      .message.user { margin-left: auto; color: var(--paper); border-radius: 18px 2px 18px 18px; background: var(--ink); }
+      .message.assistant { border: 1px solid var(--line); border-radius: 2px 18px 18px 18px; background: var(--paper-soft); }
+      .message.error { color: #9c332e; border-color: rgba(156, 51, 46, 0.35); }
+      .message.streaming::after { content: ""; display: inline-block; width: 6px; height: 1em; margin-left: 4px; vertical-align: -0.16em; background: var(--clay); animation: blink 800ms step-end infinite; }
+      form { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 20px 30px 28px; border-top: 1px solid var(--line); }
+      textarea {
+        min-height: 54px;
+        max-height: 150px;
+        padding: 15px 16px;
+        resize: none;
+        color: var(--ink-deep);
+        outline: 0;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.5);
+        font: inherit;
+        line-height: 1.4;
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+      }
+      textarea:focus { border-color: var(--ink); box-shadow: 0 0 0 4px rgba(24, 63, 58, 0.08); }
+      textarea::placeholder { color: #929a91; }
+      .send { align-self: end; min-width: 78px; min-height: 54px; padding: 0 18px; color: var(--paper); border: 0; border-radius: 14px; background: var(--clay); box-shadow: 0 8px 18px rgba(216, 120, 85, 0.24); cursor: pointer; font: inherit; transition: transform 160ms ease, background 160ms ease; }
+      .send:hover { background: #c86443; transform: translateY(-2px); }
+      .send:disabled { cursor: wait; opacity: 0.65; transform: none; }
+      @keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes blink { 50% { opacity: 0; } }
+      @media (max-width: 720px) {
+        .shell { width: 100%; min-height: 100vh; margin: 0; grid-template-columns: 1fr; border: 0; border-radius: 0; }
+        aside { display: block; min-height: 170px; padding: 24px; }
+        .eyebrow { margin: 28px 0 5px; }
+        h1 { max-width: none; font-size: 29px; }
+        .side-copy, .status { display: none; }
+        main { min-height: calc(100vh - 170px); }
+        .topbar, #messages, form { padding-left: 20px; padding-right: 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand"><span class="moon" aria-hidden="true"></span><strong>小奥</strong></div>
+        <p class="eyebrow">A QUIET CORNER</p>
+        <h1>有些话，慢慢说。</h1>
+        <p class="side-copy">不用组织得很好。今天的情绪、琐事，或者一句“我在”，都可以留在这里。</p>
+        <div class="status"><span class="dot" aria-hidden="true"></span>小奥在这儿</div>
+      </aside>
+      <main>
+        <header class="topbar"><span class="today" id="today"></span><button class="clear" id="reset" type="button">重新开始</button></header>
+        <section id="messages" aria-live="polite">
+          <div class="welcome"><small>今晚的第一句话</small><p>嗨，Oliver。今天想从哪一件小事开始聊？</p></div>
+        </section>
+        <form id="chat-form">
+          <textarea id="message" rows="1" maxlength="2000" placeholder="写下你现在想说的话…" aria-label="消息内容"></textarea>
+          <button class="send" id="send" type="submit">发送</button>
+        </form>
+      </main>
+    </div>
+    <script>
+      const messages = document.querySelector('#messages');
+      const form = document.querySelector('#chat-form');
+      const input = document.querySelector('#message');
+      const send = document.querySelector('#send');
+      const reset = document.querySelector('#reset');
+      const userId = localStorage.getItem('alf-user-id') || 'oliver';
+      localStorage.setItem('alf-user-id', userId);
+      document.querySelector('#today').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date());
+
+      function addMessage(text, role, extra = '') {
+        const node = document.createElement('div');
+        node.className = `message ${role} ${extra}`;
+        node.textContent = text;
+        messages.append(node);
+        messages.scrollTop = messages.scrollHeight;
+        return node;
+      }
+      function resize() { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 150)}px`; }
+      input.addEventListener('input', resize);
+      input.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const text = input.value.trim();
+        if (!text || send.disabled) return;
+        addMessage(text, 'user');
+        input.value = '';
+        resize();
+        send.disabled = true;
+        send.textContent = '听着呢…';
+        const pending = addMessage('小奥正在想怎么接住这句话。', 'assistant', 'streaming');
+        try {
+          const response = await fetch('/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, user_id: userId }) });
+          if (!response.ok) throw new Error(`请求失败 (${response.status})`);
+          if (!response.body) throw new Error('浏览器不支持流式响应');
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let started = false;
+          let finished = false;
+          while (!finished) {
+            const { value, done } = await reader.read();
+            buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+            const records = buffer.split('\n\n');
+            buffer = records.pop();
+            for (const record of records) {
+              const name = record.match(/^event: (.+)$/m)?.[1];
+              const data = record.match(/^data: (.+)$/m)?.[1];
+              if (!name || !data) continue;
+              const payload = JSON.parse(data);
+              if (name === 'token') {
+                if (!started) { pending.textContent = ''; started = true; }
+                pending.textContent += payload.text;
+                messages.scrollTop = messages.scrollHeight;
+              } else if (name === 'error') {
+                throw new Error(payload.message);
+              } else if (name === 'done') {
+                finished = true;
+              }
+            }
+            if (done) finished = true;
+          }
+          if (!started) pending.textContent = '我刚刚走神了一下，你可以再说一次吗？';
+        } catch (error) {
+          pending.textContent = `没有连上小奥：${error.message}`;
+          pending.classList.add('error');
+        } finally {
+          pending.classList.remove('streaming');
+          send.disabled = false;
+          send.textContent = '发送';
+          input.focus();
+        }
+      });
+      reset.addEventListener('click', async () => {
+        await fetch(`/reset?user_id=${encodeURIComponent(userId)}`, { method: 'POST' });
+        messages.innerHTML = '<div class="welcome"><small>新的页码</small><p>好，我们从这里重新开始。此刻你想说什么？</p></div>';
+        input.focus();
+      });
+    </script>
+  </body>
+</html>

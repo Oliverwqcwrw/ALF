@@ -11,6 +11,7 @@ src/alf.egg-info/requires.txt
 src/alf.egg-info/top_level.txt
 src/alf/api/__init__.py
 src/alf/api/app.py
+src/alf/api/static/index.html
 src/alf/config/__init__.py
 src/alf/config/mem0_config.py
 src/alf/config/settings.py
