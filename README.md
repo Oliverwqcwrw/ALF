@@ -6,7 +6,7 @@
 
 ## 特性
 
-- **长期记忆** — mem0 自动从对话中抽取事实型记忆 (情感事件 / 个人偏好 / 重要事实), 跨会话生效, 按 user_id 隔离。
+- **长期记忆** — mem0 自动从对话中抽取事实型记忆 (情感事件 / 个人偏好 / 重要事实), 跨会话生效, 按 user_id 隔离。后端默认用本地 ChromaDB (纯 Python, 文件存储, 零外部服务)。
 - **情感感知** — 每轮对话先做轻量情绪/主题识别, 再决定回复策略, 低落时先共情再问要不要聊。
 - **稳定人格** — 独立 system prompt 定义温柔但有边界的小奥, 不说"作为 AI"、不说教、不分点。
 - **可编排流程** — LangGraph 串起 `检索记忆 → 分析意图 → 生成回复 → 写回记忆` 四个节点, 每步可观测、可替换。
@@ -87,7 +87,7 @@ CHAT_MODEL=deepseek-chat
 CHAT_MODEL_MINI=deepseek-chat
 ```
 
-> mem0 默认用本地 sqlite_vec + OpenAI embedding, 无需起额外服务。如要换 Qdrant, 见 `src/alf/config/mem0_config.py`。
+> mem0 默认用本地 ChromaDB + OpenAI embedding, 无需起额外服务。如要换 Qdrant, 见 `src/alf/config/mem0_config.py`。
 
 ### 3. 运行
 
