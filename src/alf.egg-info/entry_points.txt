@@ -1,0 +1,2 @@
+[console_scripts]
+alf = alf.cli:main
