@@ -56,7 +56,7 @@ def stream_chat_endpoint(req: ChatRequest) -> StreamingResponse:
         try:
             for text in stream(req.message, user_id=req.user_id):
                 yield event("token", {"text": text})
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("stream chat failed")
             yield event("error", {"message": "小奥暂时没能接上这句话，请稍后再试。"})
         else:

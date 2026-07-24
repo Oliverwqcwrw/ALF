@@ -28,12 +28,19 @@ class Settings(BaseSettings):
     # ALF
     alf_user_id: str = "oliver"
     alf_agent_name: str = "小奥"
+    alf_state_dir: str = "./alf_data"  # 短期会话历史 + 情绪状态持久化目录
 
     @property
     def mem0_data_path(self) -> Path:
         p = Path(self.mem0_data_dir)
         p.mkdir(parents=True, exist_ok=True)
         return p
+
+    @property
+    def alf_state_path(self) -> Path:
+        p = Path(self.alf_state_dir)
+        p.mkdir(parents=True, exist_ok=True)
+        return p / "alf_state.db"
 
 
 settings = Settings()

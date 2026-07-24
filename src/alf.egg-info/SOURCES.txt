@@ -3,6 +3,7 @@ pyproject.toml
 src/alf/__init__.py
 src/alf/cli.py
 src/alf/runner.py
+src/alf/store.py
 src/alf.egg-info/PKG-INFO
 src/alf.egg-info/SOURCES.txt
 src/alf.egg-info/dependency_links.txt

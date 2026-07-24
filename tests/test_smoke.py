@@ -1,7 +1,7 @@
 """冒烟测试: 只验证模块能 import 与状态类型."""
 from alf.graph import ConversationState
 from alf.memory import store
-from alf.persona import PERSONA_SYSTEM, EXTRACT_INTENT, SHOULD_REMEMBER
+from alf.persona import EXTRACT_INTENT, PERSONA_SYSTEM, SHOULD_REMEMBER
 
 
 def test_imports():
