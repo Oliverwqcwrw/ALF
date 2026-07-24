@@ -1,15 +1,15 @@
 """对话入口: 管理持久化历史 + 情绪状态 + 调用 graph."""
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import logging
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from time import perf_counter
+from uuid import uuid4
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from . import store
-from .memory import store as memory_store
 from .config import settings
 from .graph import app_graph
 from .graph.nodes import (
@@ -20,6 +20,7 @@ from .graph.nodes import (
     stream_reply,
     update_impression,
 )
+from .memory import store as memory_store
 from .persona import PROACTIVE_MESSAGE_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -74,21 +75,30 @@ def _persist_impression(user_id: str, result: dict) -> None:
         store.set_impression(user_id, new)
 
 
-def _prepare_stream_state(state: dict) -> dict:
+def _prepare_stream_state(state: dict, trace_id: str = "stream") -> dict:
     """并行完成流式回复前的安全分析与记忆检索。
 
     危机/情绪分析决定回复策略，必须在生成前完成；长期记忆则设很短的
     等待预算，慢查询不应让用户一直等到第一个 token。
     """
     started_at = perf_counter()
+
+    def run_preflight_task(name: str, task):
+        task_started_at = perf_counter()
+        logger.info("[%s] %s started", trace_id, name)
+        try:
+            return task(state)
+        finally:
+            logger.info("[%s] %s finished in %.0fms", trace_id, name, (perf_counter() - task_started_at) * 1000)
+
     executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="alf-preflight")
-    memory_future = executor.submit(retrieve_memories, state)
-    intent_future = executor.submit(analyze_intent, state)
+    memory_future = executor.submit(run_preflight_task, "memory retrieval", retrieve_memories)
+    intent_future = executor.submit(run_preflight_task, "intent analysis", analyze_intent)
 
     try:
         # 这一步保留同步等待，避免危机消息在未经安全路由时开始生成。
         state.update(intent_future.result())
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception("stream intent analysis failed; using safe normal fallback")
         state.update({"intent": {"emotion": "neutral", "is_crisis": False}, "route": "normal"})
 
@@ -97,15 +107,15 @@ def _prepare_stream_state(state: dict) -> dict:
     except TimeoutError:
         # 检索会继续在后台收尾，但本轮不再等待，避免把“记得”变成“迟到”。
         state["memories"] = []
-        logger.info("stream memory retrieval exceeded %.0fms; continuing without it", STREAM_MEMORY_WAIT_SECONDS * 1000)
-    except Exception:  # noqa: BLE001
+        logger.info("[%s] memory retrieval exceeded %.0fms; continuing without it", trace_id, STREAM_MEMORY_WAIT_SECONDS * 1000)
+    except Exception:
         state["memories"] = []
         logger.exception("stream memory retrieval failed; continuing without it")
     finally:
         # 不等待超时的检索任务，已开始的请求自然结束；尚未开始的可取消。
         executor.shutdown(wait=False, cancel_futures=True)
 
-    logger.info("stream preflight completed in %.0fms", (perf_counter() - started_at) * 1000)
+    logger.info("[%s] preflight completed in %.0fms", trace_id, (perf_counter() - started_at) * 1000)
     return state
 
 
@@ -198,19 +208,45 @@ def stream(user_message: str, user_id: str | None = None):
 
     流式路径跳过 self_check (无法中途重生成); 路由/共情/主动关怀仍生效.
     """
+    trace_id = uuid4().hex[:8]
+    request_started_at = perf_counter()
     uid = user_id or settings.alf_user_id
+    logger.info("[%s] stream request started", trace_id)
+
+    state_load_started_at = perf_counter()
     state = _load_state(uid, user_message)
-    _prepare_stream_state(state)
+    logger.info("[%s] state load finished in %.0fms", trace_id, (perf_counter() - state_load_started_at) * 1000)
+    _prepare_stream_state(state, trace_id)
 
     reply_parts: list[str] = []
+    reply_started_at = perf_counter()
+    first_token = True
     for text in stream_reply(state):
+        if first_token:
+            logger.info("[%s] main reply first token in %.0fms (total %.0fms)", trace_id, (perf_counter() - reply_started_at) * 1000, (perf_counter() - request_started_at) * 1000)
+            first_token = False
         reply_parts.append(text)
         yield text
+    logger.info("[%s] main reply stream finished in %.0fms", trace_id, (perf_counter() - reply_started_at) * 1000)
 
     reply = "".join(reply_parts).strip()
     state["reply"] = reply
+    post_process_started_at = perf_counter()
+
+    stage_started_at = perf_counter()
     maybe_write_memory(state)
+    logger.info("[%s] memory write finished in %.0fms", trace_id, (perf_counter() - stage_started_at) * 1000)
+
+    stage_started_at = perf_counter()
     state.update(update_impression(state))
+    logger.info("[%s] impression update finished in %.0fms", trace_id, (perf_counter() - stage_started_at) * 1000)
+
     emotion = state.get("intent", {}).get("emotion", "neutral")
+    stage_started_at = perf_counter()
     _persist(uid, user_message, reply, emotion)
+    logger.info("[%s] local persistence finished in %.0fms", trace_id, (perf_counter() - stage_started_at) * 1000)
+
+    stage_started_at = perf_counter()
     _persist_impression(uid, state)
+    logger.info("[%s] impression persistence finished in %.0fms", trace_id, (perf_counter() - stage_started_at) * 1000)
+    logger.info("[%s] post-process finished in %.0fms; request finished in %.0fms", trace_id, (perf_counter() - post_process_started_at) * 1000, (perf_counter() - request_started_at) * 1000)
