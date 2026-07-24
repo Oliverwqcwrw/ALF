@@ -107,6 +107,30 @@ SELF_CHECK_PROMPT = """判断下面这条小奥的回复是否符合陪伴规范
 只输出 JSON: {{"pass": true/false, "reason": "一句话说明问题或 ok"}}
 """
 
+# 关系印象画像更新: 像朋友脑中关于 TA 的笔记, 融合本轮新信息后重写.
+IMPRESSION_UPDATE_PROMPT = """你是 {alf_agent_name}. 根据下面这条新信息, 更新你脑中对 {alf_user_id} 的印象.
+
+# 当前印象 (可能为空)
+{current}
+
+# 本轮 TA 说的话
+{message}
+
+# 本轮情绪 / 话题
+情绪: {emotion}
+话题: {topic}
+
+# 要求
+- 像朋友脑中关于 TA 的笔记, 自然语言, 不分点.
+- 只融合本轮新信息, 不编造、不臆测、不脑补.
+- 保留时间感 (如 "最近在忙 deadline" "上个月提过妈妈住院").
+- 记录 TA 的处境、在意的事、性格倾向、最近状态、对什么回应接得住.
+- 不替你做价值判断 (不写 "TA 这样不好" "TA 应该...").
+- 控制在 200 字以内.
+
+只输出更新后的完整印象, 不要任何额外说明.
+"""
+
 # 抽取对话中事实型记忆的 prompt, 用于 mem0 之外的语义打标
 EXTRACT_INTENT = """分析下面这条用户消息, 输出 JSON, 包含四个字段:
 - emotion: 用户当前情绪 (happy / sad / anxious / angry / calm / mixed / neutral)

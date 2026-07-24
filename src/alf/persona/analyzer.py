@@ -82,6 +82,30 @@ class Analyzer:
             logger.warning("check_reply failed: %s", e)
             return True, ""
 
+    def update_impression(
+        self, current: str, message: str, emotion: str, topic: str
+    ) -> str:
+        """融合本轮新信息重写印象画像. 失败时返回旧画像, 不阻断主流程."""
+        from ..config import settings
+        from .prompt import IMPRESSION_UPDATE_PROMPT
+
+        try:
+            raw = self.llm.invoke(
+                IMPRESSION_UPDATE_PROMPT.format(
+                    alf_agent_name=settings.alf_agent_name,
+                    alf_user_id=settings.alf_user_id,
+                    current=current or "(空)",
+                    message=message,
+                    emotion=emotion,
+                    topic=topic or "(无明显话题)",
+                )
+            ).content
+            new = self._strip_code_fence(raw).strip()
+            return new or current
+        except Exception as e:  # noqa: BLE001
+            logger.warning("update_impression failed: %s", e)
+            return current
+
     @staticmethod
     def _strip_code_fence(text: str) -> str:
         """去掉模型可能包的 ```json ... ```."""

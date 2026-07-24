@@ -40,6 +40,11 @@ def _get_conn() -> sqlite3.Connection:
                 emotion TEXT    NOT NULL,
                 ts      REAL    NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS impressions (
+                user_id    TEXT PRIMARY KEY,
+                impression TEXT NOT NULL,
+                updated_at REAL NOT NULL
+            );
             CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, id);
             CREATE INDEX IF NOT EXISTS idx_emotions_user ON emotions(user_id, id);
             """
@@ -108,6 +113,28 @@ def consecutive_low_count(user_id: str) -> int:
         else:
             break
     return n
+
+
+def get_impression(user_id: str) -> str:
+    """读取小奥对该用户的整体印象画像 (可能为空)."""
+    row = _get_conn().execute(
+        "SELECT impression FROM impressions WHERE user_id = ?", (user_id,)
+    ).fetchone()
+    return row["impression"] if row else ""
+
+
+def set_impression(user_id: str, impression: str) -> None:
+    """写入/覆盖印象画像 (UPSERT)."""
+    import time
+
+    with _lock:
+        _get_conn().execute(
+            "INSERT INTO impressions(user_id, impression, updated_at) VALUES(?, ?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET "
+            "impression=excluded.impression, updated_at=excluded.updated_at",
+            (user_id, impression, time.time()),
+        )
+        _get_conn().commit()
 
 
 def _trim(user_id: str, table: str, limit: int) -> None:

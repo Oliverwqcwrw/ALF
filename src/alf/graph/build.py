@@ -9,13 +9,10 @@
         │                  └────────────────────┴────────────────────┘
         │                                       │
         │                                       ▼
-        │                               generate_reply ◀──────┐
-        │                                       │             │ (自检未过 & 未超限)
-        │                                       ▼             │
         │                                  self_check (条件) ──┘
         │                                       │
         │                                       ▼
-        └───────────────────────────▶ maybe_write_memory ──▶ END
+        └───────────────────────────▶ maybe_write_memory ──▶ update_impression ──▶ END
 """
 from __future__ import annotations
 
@@ -29,6 +26,7 @@ from .nodes import (
     retrieve_memories,
     route_by_intent,
     self_check,
+    update_impression,
 )
 from .state import ConversationState
 
@@ -41,6 +39,7 @@ def build_graph():
     g.add_node("generate_reply", generate_reply)
     g.add_node("self_check", self_check)
     g.add_node("maybe_write_memory", maybe_write_memory)
+    g.add_node("update_impression", update_impression)
 
     g.set_entry_point("retrieve_memories")
     g.add_edge("retrieve_memories", "analyze_intent")
@@ -67,7 +66,8 @@ def build_graph():
             "generate_reply": "generate_reply",
         },
     )
-    g.add_edge("maybe_write_memory", END)
+    g.add_edge("maybe_write_memory", "update_impression")
+    g.add_edge("update_impression", END)
 
     return g.compile()
 

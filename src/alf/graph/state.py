@@ -17,6 +17,7 @@ class ConversationState(TypedDict, total=False):
     # 流程中产生
     memories: list[dict[str, Any]]  # 检索到的相关记忆
     intent: dict[str, Any]  # {emotion, topic, is_significant, is_crisis}
+    impression: str  # 小奥对该用户的整体印象画像 (runner 注入并持久化)
 
     # 路由决策
     route: str  # crisis | empathize | normal

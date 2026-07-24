@@ -109,7 +109,15 @@ def build_reply_messages(state: ConversationState) -> list:
 
     # 注入记忆
     memory_block = format_memories(state.get("memories", []))
-    system_prompt += "\n\n# 关于用户的过往记忆\n" + memory_block
+
+    # 注入印象画像 (整体认知框架, 先于具体记忆事实)
+    impression = state.get("impression", "")
+    impression_block = impression if impression else "(刚认识 TA, 还没印象)"
+
+    system_prompt += (
+        "\n\n# 小奥对 TA 的印象\n" + impression_block
+        + "\n\n# 关于用户的过往记忆\n" + memory_block
+    )
 
     # 自检失败重试: 提示上一版的问题
     retry = state.get("retry_count", 0)
@@ -214,4 +222,32 @@ def maybe_write_memory(state: ConversationState) -> ConversationState:
         )
     except Exception as e:  # noqa: BLE001
         logger.warning("write memory failed: %s", e)
+    return {}
+
+
+def update_impression(state: ConversationState) -> ConversationState:
+    """触发式更新印象画像: 仅显著/低落/危机时重写, 否则跳过.
+
+    避免日常闲聊每轮都改画像 (成本 + 漂移). 画像是整体认知,
+    与 mem0 的离散事实互补: mem0 给可检索细节, 画像给框架.
+    """
+    intent = state.get("intent", {})
+    emotion = intent.get("emotion", "neutral")
+    is_crisis = intent.get("is_crisis", False)
+    is_significant = intent.get("is_significant", False)
+
+    # 触发条件: 任一满足才改写.
+    if not (is_significant or emotion in LOW_EMOTIONS or is_crisis):
+        return {}
+
+    current = state.get("impression", "")
+    new = analyzer.update_impression(
+        current=current,
+        message=state["user_message"],
+        emotion=emotion,
+        topic=intent.get("topic", ""),
+    )
+    if new and new != current:
+        logger.info("impression updated")
+        return {"impression": new}
     return {}
