@@ -6,6 +6,7 @@ import logging
 import queue
 from contextlib import asynccontextmanager
 from pathlib import Path
+from time import perf_counter
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
@@ -65,8 +66,13 @@ def stream_chat_endpoint(req: ChatRequest) -> StreamingResponse:
         return f"event: {name}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
     def generate():
+        started_at = perf_counter()
+        first_token = True
         try:
             for text in stream(req.message, user_id=req.user_id):
+                if first_token:
+                    logger.info("stream first token in %.0fms", (perf_counter() - started_at) * 1000)
+                    first_token = False
                 yield event("token", {"text": text})
         except Exception:
             logger.exception("stream chat failed")

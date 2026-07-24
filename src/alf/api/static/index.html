@@ -3,19 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#173d38" />
+    <meta name="theme-color" content="#5b3029" />
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
     <title>小奥 · 在这陪你</title>
     <style>
       :root {
-        --ink: #183f3a;
-        --ink-deep: #102d29;
-        --paper: #f6f1e6;
-        --paper-soft: #fcf9f1;
-        --clay: #d87855;
-        --mist: #c9d8c5;
-        --muted: #69756b;
-        --line: rgba(24, 63, 58, 0.16);
+        --ink: oklch(0.33 0.065 38);
+        --ink-deep: oklch(0.25 0.05 38);
+        --paper: oklch(0.94 0.035 70);
+        --paper-soft: oklch(0.975 0.022 76);
+        --clay: oklch(0.63 0.12 45);
+        --mist: oklch(0.83 0.06 63);
+        --muted: oklch(0.52 0.035 52);
+        --line: color-mix(in oklch, var(--ink) 18%, transparent);
       }
 
       * { box-sizing: border-box; }
@@ -25,8 +25,8 @@
         margin: 0;
         color: var(--ink-deep);
         background:
-          radial-gradient(circle at 10% 4%, rgba(237, 181, 117, 0.18), transparent 26rem),
-          radial-gradient(circle at 98% 95%, rgba(150, 193, 165, 0.18), transparent 30rem),
+          radial-gradient(circle at 10% 4%, oklch(0.79 0.11 68 / 0.32), transparent 26rem),
+          radial-gradient(circle at 98% 95%, oklch(0.62 0.1 42 / 0.26), transparent 30rem),
           var(--ink);
         font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
       }
@@ -46,9 +46,9 @@
         display: grid;
         grid-template-columns: 280px minmax(0, 1fr);
         overflow: hidden;
-        border: 1px solid rgba(246, 241, 230, 0.3);
+        border: 1px solid oklch(0.94 0.035 70 / 0.38);
         border-radius: 24px;
-        box-shadow: 0 28px 80px rgba(5, 21, 18, 0.33);
+        box-shadow: 0 28px 80px oklch(0.18 0.04 38 / 0.38);
       }
       aside {
         position: relative;
@@ -58,7 +58,7 @@
         flex-direction: column;
         color: var(--paper);
         overflow: hidden;
-        background: rgba(12, 43, 39, 0.88);
+        background: color-mix(in oklch, var(--ink) 91%, oklch(0.2 0.05 38));
       }
       aside::after {
         position: absolute;
@@ -67,7 +67,7 @@
         width: 210px;
         height: 210px;
         content: "";
-        border: 1px solid rgba(246, 241, 230, 0.35);
+        border: 1px solid oklch(0.94 0.035 70 / 0.42);
         border-radius: 50%;
       }
       .brand { display: flex; align-items: center; gap: 12px; }
@@ -84,7 +84,7 @@
         font-weight: 500;
         letter-spacing: 0.06em;
       }
-      .eyebrow { margin: 52px 0 10px; color: #c8d5c5; font-size: 11px; letter-spacing: 0.18em; }
+      .eyebrow { margin: 52px 0 10px; color: oklch(0.84 0.045 70); font-size: 11px; letter-spacing: 0.18em; }
       h1 {
         max-width: 190px;
         margin: 0;
@@ -93,9 +93,9 @@
         font-weight: 400;
         line-height: 1.16;
       }
-      .side-copy { margin: 24px 0 0; color: #dce4d8; font-size: 14px; line-height: 1.8; }
-      .status { margin-top: auto; display: flex; align-items: center; gap: 8px; color: #dce4d8; font-size: 12px; }
-      .dot { width: 8px; height: 8px; border-radius: 50%; background: #9bcd9e; box-shadow: 0 0 0 5px rgba(155, 205, 158, 0.11); }
+      .side-copy { margin: 24px 0 0; color: oklch(0.91 0.026 70); font-size: 14px; line-height: 1.8; }
+      .status { margin-top: auto; display: flex; align-items: center; gap: 8px; color: oklch(0.91 0.026 70); font-size: 12px; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: oklch(0.76 0.105 65); box-shadow: 0 0 0 5px oklch(0.76 0.105 65 / 0.13); }
       main { display: flex; min-height: 690px; flex-direction: column; background: var(--paper); }
       .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 30px 18px; border-bottom: 1px solid var(--line); }
       .today { color: var(--muted); font-size: 12px; letter-spacing: 0.07em; }
@@ -120,26 +120,26 @@
       .boundary-kicker { margin: 0 0 6px; color: var(--muted); font-size: 11px; letter-spacing: 0.12em; }
       .boundary-copy { max-width: 52ch; margin: 0; font-size: 13px; line-height: 1.75; }
       .boundary-actions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
-      .quiet-button { padding: 8px 11px; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; background: rgba(252, 249, 241, 0.55); cursor: pointer; font: inherit; font-size: 12px; transition: transform 160ms ease, background 160ms ease; }
+      .quiet-button { padding: 8px 11px; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; background: oklch(0.975 0.022 76 / 0.62); cursor: pointer; font: inherit; font-size: 12px; transition: transform 160ms ease, background 160ms ease; }
       .quiet-button:hover { background: var(--paper-soft); transform: translateY(-1px); }
       .quiet-button:active { transform: translateY(0); }
-      .quiet-button.danger { color: #843a31; border-color: rgba(132, 58, 49, 0.35); }
+      .quiet-button.danger { color: oklch(0.43 0.11 33); border-color: oklch(0.43 0.11 33 / 0.35); }
       .memory-list { grid-column: 1 / -1; display: grid; gap: 8px; }
       .memory-list:empty { display: none; }
-      .memory-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-top: 1px solid rgba(24, 63, 58, 0.12); font-size: 13px; line-height: 1.55; }
+      .memory-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-top: 1px solid color-mix(in oklch, var(--ink) 13%, transparent); font-size: 13px; line-height: 1.55; }
       .memory-item button { flex: none; padding: 3px 0; color: var(--muted); border: 0; border-bottom: 1px solid currentColor; background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
       .memory-empty { color: var(--muted); font-size: 13px; }
-      .boundary-confirm { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 2px; color: #843a31; font-size: 12px; }
+      .boundary-confirm { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 2px; color: oklch(0.43 0.11 33); font-size: 12px; }
       .new-conversation-confirm { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 12px 30px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--paper-soft); font-size: 12px; }
       .new-conversation-confirm[hidden] { display: none; }
       #messages { flex: 1; padding: 32px 30px 24px; overflow-y: auto; scroll-behavior: smooth; }
-      .welcome { max-width: 520px; padding: 24px; border: 1px solid var(--line); border-radius: 2px 18px 18px 18px; background: var(--paper-soft); animation: rise 500ms both; }
+      .welcome { max-width: 520px; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-soft); animation: rise 500ms both; }
       .welcome small { display: block; margin-bottom: 12px; color: var(--clay); font-size: 11px; letter-spacing: 0.16em; }
       .welcome p { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 20px; line-height: 1.65; }
       .message { max-width: min(84%, 560px); margin: 0 0 20px; padding: 14px 17px; font-size: 15px; line-height: 1.75; animation: rise 260ms both; }
       .message.user { margin-left: auto; color: var(--paper); border-radius: 18px 2px 18px 18px; background: var(--ink); }
       .message.assistant { border: 1px solid var(--line); border-radius: 2px 18px 18px 18px; background: var(--paper-soft); }
-      .message.error { color: #9c332e; border-color: rgba(156, 51, 46, 0.35); }
+      .message.error { color: oklch(0.43 0.12 30); border-color: oklch(0.43 0.12 30 / 0.35); }
       .message.streaming::after { content: ""; display: inline-block; width: 6px; height: 1em; margin-left: 4px; vertical-align: -0.16em; background: var(--clay); animation: blink 800ms step-end infinite; }
       .input-context { padding: 0 30px 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
       form { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 14px 30px 28px; border-top: 1px solid var(--line); }
@@ -152,19 +152,19 @@
         outline: 0;
         border: 1px solid var(--line);
         border-radius: 14px;
-        background: rgba(255, 255, 255, 0.5);
+        background: oklch(0.99 0.015 76 / 0.62);
         font: inherit;
         line-height: 1.4;
         transition: border-color 160ms ease, box-shadow 160ms ease;
       }
-      textarea:focus { border-color: var(--ink); box-shadow: 0 0 0 4px rgba(24, 63, 58, 0.08); }
-      textarea::placeholder { color: #929a91; }
-      .send { align-self: end; min-width: 78px; min-height: 54px; padding: 0 18px; color: var(--paper); border: 0; border-radius: 14px; background: var(--clay); box-shadow: 0 8px 18px rgba(216, 120, 85, 0.24); cursor: pointer; font: inherit; transition: transform 160ms ease, background 160ms ease; }
-      .send:hover { background: #c86443; transform: translateY(-2px); }
+      textarea:focus { border-color: var(--ink); box-shadow: 0 0 0 4px oklch(0.55 0.09 42 / 0.12); }
+      textarea::placeholder { color: oklch(0.62 0.025 57); }
+      .send { align-self: end; min-width: 78px; min-height: 54px; padding: 0 18px; color: var(--paper); border: 0; border-radius: 14px; background: var(--clay); box-shadow: 0 8px 18px oklch(0.55 0.1 42 / 0.24); cursor: pointer; font: inherit; transition: transform 160ms ease, background 160ms ease; }
+      .send:hover { background: oklch(0.57 0.13 42); transform: translateY(-2px); }
       .send:disabled { cursor: wait; opacity: 0.65; transform: none; }
       .abort { display: none; align-self: end; min-height: 54px; padding: 0 4px; color: var(--muted); border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
       .abort.visible { display: block; }
-      button:focus-visible, textarea:focus-visible { outline: 3px solid rgba(216, 120, 85, 0.38); outline-offset: 3px; }
+      button:focus-visible, textarea:focus-visible { outline: 3px solid oklch(0.63 0.12 45 / 0.48); outline-offset: 3px; }
       @keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes blink { 50% { opacity: 0; } }
       @media (max-width: 720px) {

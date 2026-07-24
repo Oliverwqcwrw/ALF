@@ -1,7 +1,9 @@
 """对话入口: 管理持久化历史 + 情绪状态 + 调用 graph."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import logging
+from time import perf_counter
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -24,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 # 进入本轮前连续低落达到该轮数 → 触发主动关怀.
 PROACTIVE_CARE_THRESHOLD = 2
+# 长期记忆能让回复更贴近用户，但不能长期阻塞首个 token。意图/危机分析仍必须完成。
+STREAM_MEMORY_WAIT_SECONDS = 0.35
 
 _proactive_llm: ChatOpenAI | None = None
 
@@ -68,6 +72,41 @@ def _persist_impression(user_id: str, result: dict) -> None:
     new = result.get("impression")
     if new:
         store.set_impression(user_id, new)
+
+
+def _prepare_stream_state(state: dict) -> dict:
+    """并行完成流式回复前的安全分析与记忆检索。
+
+    危机/情绪分析决定回复策略，必须在生成前完成；长期记忆则设很短的
+    等待预算，慢查询不应让用户一直等到第一个 token。
+    """
+    started_at = perf_counter()
+    executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="alf-preflight")
+    memory_future = executor.submit(retrieve_memories, state)
+    intent_future = executor.submit(analyze_intent, state)
+
+    try:
+        # 这一步保留同步等待，避免危机消息在未经安全路由时开始生成。
+        state.update(intent_future.result())
+    except Exception:  # noqa: BLE001
+        logger.exception("stream intent analysis failed; using safe normal fallback")
+        state.update({"intent": {"emotion": "neutral", "is_crisis": False}, "route": "normal"})
+
+    try:
+        state.update(memory_future.result(timeout=STREAM_MEMORY_WAIT_SECONDS))
+    except TimeoutError:
+        # 检索会继续在后台收尾，但本轮不再等待，避免把“记得”变成“迟到”。
+        state["memories"] = []
+        logger.info("stream memory retrieval exceeded %.0fms; continuing without it", STREAM_MEMORY_WAIT_SECONDS * 1000)
+    except Exception:  # noqa: BLE001
+        state["memories"] = []
+        logger.exception("stream memory retrieval failed; continuing without it")
+    finally:
+        # 不等待超时的检索任务，已开始的请求自然结束；尚未开始的可取消。
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    logger.info("stream preflight completed in %.0fms", (perf_counter() - started_at) * 1000)
+    return state
 
 
 def chat(user_message: str, user_id: str | None = None) -> str:
@@ -161,8 +200,7 @@ def stream(user_message: str, user_id: str | None = None):
     """
     uid = user_id or settings.alf_user_id
     state = _load_state(uid, user_message)
-    state.update(retrieve_memories(state))
-    state.update(analyze_intent(state))
+    _prepare_stream_state(state)
 
     reply_parts: list[str] = []
     for text in stream_reply(state):

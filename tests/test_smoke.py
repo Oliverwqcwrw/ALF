@@ -34,3 +34,32 @@ def test_prompts_nonempty():
     assert "小奥" in PERSONA_SYSTEM
     assert "{message}" in EXTRACT_INTENT
     assert "{message}" in SHOULD_REMEMBER
+
+
+def test_stream_preflight_parallelizes_memory_and_intent(monkeypatch):
+    """慢记忆检索不应拖住安全分析或首个流式 token。"""
+    from threading import Event
+
+    from alf import runner
+
+    memory_started = Event()
+    release_memory = Event()
+    monkeypatch.setattr(runner, "STREAM_MEMORY_WAIT_SECONDS", 0.001)
+
+    def slow_memory(_state):
+        memory_started.set()
+        release_memory.wait(timeout=1)
+        return {"memories": [{"memory": "迟到的记忆"}]}
+
+    def intent(_state):
+        assert memory_started.wait(timeout=0.1)
+        return {"intent": {"emotion": "neutral", "is_crisis": False}, "route": "normal"}
+
+    monkeypatch.setattr(runner, "retrieve_memories", slow_memory)
+    monkeypatch.setattr(runner, "analyze_intent", intent)
+
+    state = runner._prepare_stream_state({"user_message": "hi"})
+    release_memory.set()
+
+    assert state["route"] == "normal"
+    assert state["memories"] == []
