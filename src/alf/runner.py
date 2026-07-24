@@ -25,6 +25,7 @@ def _load_state(user_id: str, user_message: str) -> dict:
     emotion_history = store.get_emotion_history(user_id)
     consec_before = store.consecutive_low_count(user_id)
     impression = store.get_impression(user_id)
+    recent_events = store.get_recent_emotion_events(user_id)
     return {
         "user_id": user_id,
         "user_message": user_message,
@@ -32,6 +33,7 @@ def _load_state(user_id: str, user_message: str) -> dict:
         "emotion_history": emotion_history,
         "proactively_care": consec_before >= PROACTIVE_CARE_THRESHOLD,
         "impression": impression,
+        "recent_events": recent_events,
     }
 
 

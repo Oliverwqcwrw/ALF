@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from typing import Any
 
 from .config import settings
 
@@ -45,8 +46,17 @@ def _get_conn() -> sqlite3.Connection:
                 impression TEXT NOT NULL,
                 updated_at REAL NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS emotion_events (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id   TEXT    NOT NULL,
+                emotion   TEXT    NOT NULL,
+                situation TEXT    NOT NULL,
+                topic     TEXT    NOT NULL,
+                ts        REAL    NOT NULL
+            );
             CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, id);
             CREATE INDEX IF NOT EXISTS idx_emotions_user ON emotions(user_id, id);
+            CREATE INDEX IF NOT EXISTS idx_emotion_events_user ON emotion_events(user_id, id);
             """
         )
         _conn.commit()
@@ -135,6 +145,48 @@ def set_impression(user_id: str, impression: str) -> None:
             (user_id, impression, time.time()),
         )
         _get_conn().commit()
+
+
+_EMOTION_EVENT_KEEP = 50
+
+
+def record_emotion_event(
+    user_id: str, emotion: str, situation: str, topic: str
+) -> None:
+    """记录一条情绪-事件 (情绪 + 触发情境), 用于时序关联"这次为什么"."""
+    import time
+
+    with _lock:
+        _get_conn().execute(
+            "INSERT INTO emotion_events(user_id, emotion, situation, topic, ts) "
+            "VALUES(?, ?, ?, ?, ?)",
+            (user_id, emotion, situation, topic, time.time()),
+        )
+        _get_conn().commit()
+    _trim(user_id, "emotion_events", _EMOTION_EVENT_KEEP)
+
+
+def get_recent_emotion_events(
+    user_id: str, limit: int = 5, days: int = 14
+) -> list[dict[str, Any]]:
+    """最近 days 天内最近 limit 条情绪事件 (时序正序, 用于注入关联)."""
+    import time as _time
+
+    cutoff = _time.time() - days * 86400
+    rows = _get_conn().execute(
+        "SELECT emotion, situation, topic, ts FROM emotion_events "
+        "WHERE user_id = ? AND ts >= ? ORDER BY id DESC LIMIT ?",
+        (user_id, cutoff, limit),
+    ).fetchall()
+    return [
+        {
+            "emotion": r["emotion"],
+            "situation": r["situation"],
+            "topic": r["topic"],
+            "ts": r["ts"],
+        }
+        for r in reversed(rows)
+    ]
 
 
 def _trim(user_id: str, table: str, limit: int) -> None:

@@ -132,9 +132,10 @@ IMPRESSION_UPDATE_PROMPT = """你是 {alf_agent_name}. 根据下面这条新信�
 """
 
 # 抽取对话中事实型记忆的 prompt, 用于 mem0 之外的语义打标
-EXTRACT_INTENT = """分析下面这条用户消息, 输出 JSON, 包含四个字段:
+EXTRACT_INTENT = """分析下面这条用户消息, 输出 JSON, 包含五个字段:
 - emotion: 用户当前情绪 (happy / sad / anxious / angry / calm / mixed / neutral)
 - topic: 主要话题 (一两词概括, 如 "工作" "家人" "睡眠")
+- situation: 触发这次情绪的具体情境 (一两句, 如 "项目deadline周五交不了" "妈妈住院手术"). 没有明显触发情境时输出空字符串.
 - is_significant: bool, 是否值得被长期记住 (情感事件 / 个人偏好 / 重要事实)
 - is_crisis: bool, 是否涉及自伤 / 自杀 / 紧急心理危机 (隐晦表达也要判 true)
 

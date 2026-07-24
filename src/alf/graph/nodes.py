@@ -119,6 +119,15 @@ def build_reply_messages(state: ConversationState) -> list:
         + "\n\n# 关于用户的过往记忆\n" + memory_block
     )
 
+    # 低落/危机/主动关怀分支注入近期情绪-事件, 让小奥关联"这次是不是同一件事".
+    # normal 分支不注入, 避免噪音.
+    recent_events = state.get("recent_events", [])
+    if recent_events and (route in ("empathize", "crisis") or state.get("proactively_care")):
+        system_prompt += (
+            "\n\n# TA 最近的情绪事件 (关联本轮, 看是不是同一件事再回应)\n"
+            + _format_emotion_events(recent_events)
+        )
+
     # 自检失败重试: 提示上一版的问题
     retry = state.get("retry_count", 0)
     if retry > 0 and not state.get("self_check_passed", True):
@@ -191,6 +200,19 @@ def _content_to_text(content: object) -> str:
     return ""
 
 
+def _format_emotion_events(events: list) -> str:
+    """把近期情绪-事件格式化为注入文本, 带日期便于时序关联."""
+    import time as _time
+
+    lines: list[str] = []
+    for e in events:
+        if not isinstance(e, dict):
+            continue
+        date = _time.strftime("%m-%d", _time.localtime(e.get("ts", 0)))
+        lines.append(f"- [{date} {e.get('emotion', '?')}] {e.get('situation', '')}")
+    return "\n".join(lines) if lines else "(无)"
+
+
 def maybe_write_memory(state: ConversationState) -> ConversationState:
     """把本轮对话喂给 mem0, 让它抽取记忆.
 
@@ -250,4 +272,31 @@ def update_impression(state: ConversationState) -> ConversationState:
     if new and new != current:
         logger.info("impression updated")
         return {"impression": new}
+    return {}
+
+
+def record_emotion_event(state: ConversationState) -> ConversationState:
+    """记录情绪-事件 (情绪 + 触发情境), 用于后续时序关联"这次为什么".
+
+    触发条件同 update_impression; situation 抽取在 analyze_intent 里
+    零成本完成 (与 emotion 同一次 LLM 调用), 这里只负责落库.
+    """
+    intent = state.get("intent", {})
+    emotion = intent.get("emotion", "neutral")
+    is_crisis = intent.get("is_crisis", False)
+    is_significant = intent.get("is_significant", False)
+    situation = intent.get("situation", "")
+
+    if not (is_significant or emotion in LOW_EMOTIONS or is_crisis):
+        return {}
+    if not situation:
+        # 没有具体情境 (如纯"今天好累"), 不记录事件, 避免噪音.
+        return {}
+
+    from ..store import record_emotion_event as _record
+
+    try:
+        _record(state["user_id"], emotion, situation, intent.get("topic", ""))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("record emotion_event failed: %s", e)
     return {}

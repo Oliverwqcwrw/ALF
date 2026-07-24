@@ -12,7 +12,7 @@
         │                                  self_check (条件) ──┘
         │                                       │
         │                                       ▼
-        └───────────────────────────▶ maybe_write_memory ──▶ update_impression ──▶ END
+        └───────────────────────────▶ maybe_write_memory ──▶ update_impression ──▶ record_emotion_event ──▶ END
 """
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from .nodes import (
     analyze_intent,
     generate_reply,
     maybe_write_memory,
+    record_emotion_event,
     retrieve_memories,
     route_by_intent,
     self_check,
@@ -40,6 +41,7 @@ def build_graph():
     g.add_node("self_check", self_check)
     g.add_node("maybe_write_memory", maybe_write_memory)
     g.add_node("update_impression", update_impression)
+    g.add_node("record_emotion_event", record_emotion_event)
 
     g.set_entry_point("retrieve_memories")
     g.add_edge("retrieve_memories", "analyze_intent")
@@ -66,8 +68,10 @@ def build_graph():
             "generate_reply": "generate_reply",
         },
     )
+    # 写长期记忆 → 更新印象画像 → 记录情绪-事件, 都在末尾串行 (触发条件各自判断).
     g.add_edge("maybe_write_memory", "update_impression")
-    g.add_edge("update_impression", END)
+    g.add_edge("update_impression", "record_emotion_event")
+    g.add_edge("record_emotion_event", END)
 
     return g.compile()
 

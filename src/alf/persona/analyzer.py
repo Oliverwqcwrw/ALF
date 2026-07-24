@@ -52,6 +52,7 @@ class Analyzer:
         return {
             "emotion": data.get("emotion", "neutral"),
             "topic": data.get("topic", ""),
+            "situation": data.get("situation", ""),
             "is_significant": bool(data.get("is_significant", False)),
             # 关键词或 LLM 任一命中即视为危机.
             "is_crisis": keyword_crisis or llm_crisis,
