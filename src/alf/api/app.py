@@ -16,7 +16,8 @@ from pydantic import BaseModel
 from ..runner import chat, forget_everything, forget_memory, get_memories, reset, stream
 from ..scheduler import get_proactive_queue, start_scheduler, stop_scheduler
 
-logger = logging.getLogger(__name__)
+# Uvicorn 默认将该日志器输出到终端；用于 SSE 运行状态与耗时日志。
+logger = logging.getLogger("uvicorn.error")
 
 
 @asynccontextmanager

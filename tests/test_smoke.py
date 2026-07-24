@@ -63,3 +63,17 @@ def test_stream_preflight_parallelizes_memory_and_intent(monkeypatch):
 
     assert state["route"] == "normal"
     assert state["memories"] == []
+
+
+def test_fast_intent_skips_remote_model_for_daily_emotion():
+    from alf.persona.analyzer import Analyzer
+
+    assert Analyzer._fast_intent("今天工作好累", False)["emotion"] == "sad"
+    assert Analyzer._fast_intent("今天工作很顺利", False)["emotion"] == "happy"
+
+
+def test_fast_intent_keeps_ambiguous_safety_language_for_model_review():
+    from alf.persona.analyzer import Analyzer
+
+    assert Analyzer._fast_intent("我感觉撑不住了", False) is None
+    assert Analyzer._fast_intent("我想自杀", True)["is_crisis"] is True

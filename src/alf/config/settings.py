@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
     chat_model: str = "gpt-4o-mini"
     chat_model_mini: str = "gpt-4o-mini"
+    # 陪伴对话与分类不需要长链路推理；Qwen3.x 默认开启时会显著拖慢首 token。
+    enable_thinking: bool = False
 
     # mem0
     mem0_store: str = "local"  # local | qdrant | chroma

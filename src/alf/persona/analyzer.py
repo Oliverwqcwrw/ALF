@@ -29,6 +29,7 @@ class Analyzer:
             api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
             temperature=0.0,
+            extra_body={"enable_thinking": settings.enable_thinking},
         )
 
     def extract_intent(self, message: str) -> dict[str, Any]:
@@ -40,6 +41,10 @@ class Analyzer:
         from .prompt import CRISIS_KEYWORDS, EXTRACT_INTENT
 
         keyword_crisis = any(kw in message for kw in CRISIS_KEYWORDS)
+        fast_intent = self._fast_intent(message, keyword_crisis)
+        if fast_intent is not None:
+            return fast_intent
+
         try:
             raw = self.llm.invoke(EXTRACT_INTENT.format(message=message)).content
             data = json.loads(self._strip_code_fence(raw))
@@ -56,6 +61,57 @@ class Analyzer:
             "is_significant": bool(data.get("is_significant", False)),
             # 关键词或 LLM 任一命中即视为危机.
             "is_crisis": keyword_crisis or llm_crisis,
+        }
+
+    @staticmethod
+    def _fast_intent(message: str, keyword_crisis: bool) -> dict[str, Any] | None:
+        """对明确的日常情绪走本地分类，缩短首 token 等待。
+
+        可能包含隐晦危机信号的表达一律返回 None，仍交给模型复核；显式
+        危机关键词则直接走危机路由，不会因追求速度而降低安全保护。
+        """
+        if keyword_crisis:
+            return {
+                "emotion": "sad",
+                "topic": "",
+                "situation": message,
+                "is_significant": True,
+                "is_crisis": True,
+            }
+
+        # 这些词本身未必代表危机，但在陪伴场景需要让模型做更细的语义判断。
+        ambiguous_safety_terms = (
+            "不想",
+            "活着",
+            "消失",
+            "结束",
+            "解脱",
+            "意义",
+            "撑不住",
+            "想不开",
+            "怎么办",
+            "绝望",
+            "没用",
+        )
+        if any(term in message for term in ambiguous_safety_terms):
+            return None
+
+        emotion_terms = {
+            "sad": ("难过", "伤心", "委屈", "想哭", "哭了", "失落", "孤独", "好累", "疲惫", "崩溃", "压力"),
+            "anxious": ("焦虑", "害怕", "紧张", "担心", "不安", "慌", "睡不着"),
+            "angry": ("生气", "愤怒", "烦", "讨厌", "气死", "火大"),
+            "happy": ("开心", "高兴", "幸福", "顺利", "好消息", "太好了"),
+        }
+        emotion = next(
+            (label for label, terms in emotion_terms.items() if any(term in message for term in terms)),
+            "neutral",
+        )
+        return {
+            "emotion": emotion,
+            "topic": "",
+            "situation": message if emotion != "neutral" else "",
+            "is_significant": len(message.strip()) >= 24,
+            "is_crisis": False,
         }
 
     def should_remember(self, message: str) -> bool:

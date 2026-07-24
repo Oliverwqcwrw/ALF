@@ -136,11 +136,12 @@
       .welcome { max-width: 520px; margin-bottom: 20px; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper-soft); animation: rise 500ms both; }
       .welcome small { display: block; margin-bottom: 12px; color: var(--clay); font-size: 11px; letter-spacing: 0.16em; }
       .welcome p { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 20px; line-height: 1.65; }
-      .message { max-width: min(84%, 560px); margin: 0 0 20px; padding: 14px 17px; font-size: 15px; line-height: 1.75; animation: rise 260ms both; }
+      .message { width: fit-content; max-width: min(84%, 560px); margin: 0 0 20px; padding: 14px 17px; overflow-wrap: anywhere; font-size: 15px; line-height: 1.75; animation: rise 260ms both; }
       .message.user { margin-left: auto; color: var(--paper); border-radius: 18px; background: var(--ink); }
       .message.assistant { border: 1px solid var(--line); border-radius: 18px; background: var(--paper-soft); }
       .message.error { color: oklch(0.43 0.12 30); border-color: oklch(0.43 0.12 30 / 0.35); }
-      .message.streaming::after { content: ""; display: inline-block; width: 6px; height: 1em; margin-left: 4px; vertical-align: -0.16em; background: var(--clay); animation: blink 800ms step-end infinite; }
+      .message.streaming { display: flex; align-items: center; justify-content: center; width: 76px; min-width: 76px; min-height: 48px; padding: 0; }
+      .message.streaming::after { content: ""; display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--clay); box-shadow: 14px 0 0 color-mix(in oklch, var(--clay) 72%, var(--paper)), 28px 0 0 color-mix(in oklch, var(--clay) 45%, var(--paper)); transform: translateX(-14px); animation: ember 1.3s cubic-bezier(0.25, 1, 0.5, 1) infinite; }
       .input-context { padding: 0 30px 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
       form { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 14px 30px 28px; border-top: 1px solid var(--line); }
       textarea {
@@ -166,7 +167,7 @@
       .abort.visible { display: block; }
       button:focus-visible, textarea:focus-visible { outline: 3px solid oklch(0.63 0.12 45 / 0.48); outline-offset: 3px; }
       @keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes blink { 50% { opacity: 0; } }
+      @keyframes ember { 0%, 100% { opacity: 0.45; transform: translateX(-14px) scale(0.88); } 50% { opacity: 1; transform: translateX(-14px) scale(1); } }
       @media (max-width: 720px) {
         .shell { width: 100%; min-height: 100vh; margin: 0; grid-template-columns: 1fr; border: 0; border-radius: 0; }
         aside { display: block; min-height: 170px; padding: 24px; }
@@ -280,6 +281,10 @@
         const node = document.createElement('div');
         node.className = `message ${role} ${extra}`;
         node.textContent = text;
+        if (extra.includes('streaming')) {
+          node.setAttribute('role', 'status');
+          node.setAttribute('aria-label', '小奥正在回复');
+        }
         messages.append(node);
         messages.scrollTop = messages.scrollHeight;
         return node;
@@ -364,10 +369,9 @@
         input.value = '';
         resize();
         send.disabled = true;
-        send.textContent = '听着呢…';
         abort.classList.add('visible');
         activeRequest = new AbortController();
-        const pending = addMessage('小奥正在想怎么接住这句话。', 'assistant', 'streaming');
+        const pending = addMessage('', 'assistant', 'streaming');
         try {
           const response = await fetch('/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, user_id: userId }), signal: activeRequest.signal });
           if (!response.ok) throw new Error(`请求失败 (${response.status})`);
@@ -388,7 +392,7 @@
               if (!name || !data) continue;
               const payload = JSON.parse(data);
               if (name === 'token') {
-                if (!started) { pending.textContent = ''; started = true; }
+                if (!started) { pending.classList.remove('streaming'); started = true; }
                 pending.textContent += payload.text;
                 messages.scrollTop = messages.scrollHeight;
               } else if (name === 'error') {

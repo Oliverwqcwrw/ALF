@@ -33,6 +33,7 @@ def _get_llm() -> ChatOpenAI:
             api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,
             temperature=0.85,  # 陪伴对话需要一点温度
+            extra_body={"enable_thinking": settings.enable_thinking},
         )
     return _llm
 
