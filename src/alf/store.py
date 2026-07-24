@@ -35,6 +35,11 @@ def _get_conn() -> sqlite3.Connection:
                 content TEXT    NOT NULL,
                 ts      REAL    NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS users (
+                user_id    TEXT PRIMARY KEY,
+                created_at REAL NOT NULL,
+                last_seen  REAL NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS emotions (
                 id      INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT    NOT NULL,
@@ -55,12 +60,33 @@ def _get_conn() -> sqlite3.Connection:
                 ts        REAL    NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, id);
+            CREATE INDEX IF NOT EXISTS idx_users_last_seen ON users(last_seen);
             CREATE INDEX IF NOT EXISTS idx_emotions_user ON emotions(user_id, id);
             CREATE INDEX IF NOT EXISTS idx_emotion_events_user ON emotion_events(user_id, id);
             """
         )
         _conn.commit()
     return _conn
+
+
+def register_user(user_id: str) -> None:
+    """登记一个已进入小奥的用户，供多用户调度与数据隔离使用。"""
+    import time
+
+    now = time.time()
+    with _lock:
+        _get_conn().execute(
+            "INSERT INTO users(user_id, created_at, last_seen) VALUES(?, ?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET last_seen=excluded.last_seen",
+            (user_id, now, now),
+        )
+        _get_conn().commit()
+
+
+def get_registered_users() -> list[str]:
+    """返回所有已登录过的用户，用于逐用户运行主动关怀调度。"""
+    rows = _get_conn().execute("SELECT user_id FROM users ORDER BY last_seen DESC").fetchall()
+    return [str(row["user_id"]) for row in rows]
 
 
 def get_history(user_id: str, limit: int = _HISTORY_LIMIT) -> list[dict[str, str]]:

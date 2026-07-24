@@ -77,3 +77,15 @@ def test_fast_intent_keeps_ambiguous_safety_language_for_model_review():
 
     assert Analyzer._fast_intent("我感觉撑不住了", False) is None
     assert Analyzer._fast_intent("我想自杀", True)["is_crisis"] is True
+
+
+def test_chat_request_requires_a_nonzero_five_digit_user_id():
+    import pytest
+    from pydantic import ValidationError
+
+    from alf.api.app import ChatRequest
+
+    assert ChatRequest(message="你好", user_id="12345").user_id == "12345"
+    for invalid_id in ("01234", "1234", "123456", "abcde"):
+        with pytest.raises(ValidationError):
+            ChatRequest(message="你好", user_id=invalid_id)

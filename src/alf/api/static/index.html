@@ -39,6 +39,19 @@
         pointer-events: none;
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
       }
+      .login-screen { position: fixed; inset: 0; z-index: 2; display: grid; place-items: center; padding: 24px; background: var(--paper); }
+      .login-screen[hidden] { display: none; }
+      .login-panel { width: min(390px, 100%); padding: 36px; color: var(--paper); border: 1px solid oklch(0.94 0.035 70 / 0.36); border-radius: 22px; background: var(--ink); box-shadow: 0 24px 64px oklch(0.18 0.04 38 / 0.24); }
+      .login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 42px; font-family: Georgia, "Songti SC", serif; font-size: 25px; letter-spacing: 0.06em; }
+      .login-title { max-width: none; margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 30px; font-weight: 400; line-height: 1.25; }
+      .login-copy { margin: 14px 0 26px; color: oklch(0.9 0.026 70); font-size: 14px; line-height: 1.7; }
+      .login-label { display: block; margin-bottom: 9px; color: oklch(0.84 0.045 70); font-size: 12px; letter-spacing: 0.08em; }
+      .login-input { width: 100%; min-height: 52px; padding: 12px 14px; color: var(--ink-deep); border: 1px solid transparent; border-radius: 12px; background: var(--paper-soft); font: inherit; font-size: 18px; letter-spacing: 0.12em; }
+      .login-input:focus { outline: none; }
+      .login-input::placeholder { color: oklch(0.62 0.025 57); letter-spacing: 0.04em; }
+      .login-submit { width: 100%; min-height: 50px; margin-top: 14px; color: var(--paper); border: 0; border-radius: 12px; background: var(--clay); cursor: pointer; font: inherit; font-size: 15px; transition: transform 160ms ease, background 160ms ease; }
+      .login-submit:hover { background: oklch(0.57 0.13 42); transform: translateY(-1px); }
+      .login-error { min-height: 20px; margin: 12px 0 0; color: oklch(0.82 0.1 35); font-size: 12px; }
       .shell {
         width: min(1120px, calc(100% - 32px));
         min-height: min(780px, calc(100vh - 48px));
@@ -182,7 +195,18 @@
     </style>
   </head>
   <body>
-    <div class="shell">
+    <section class="login-screen" id="login-screen" aria-label="登录小奥">
+      <form class="login-panel" id="login-form">
+        <div class="login-brand"><span class="moon" aria-hidden="true"></span>小奥</div>
+        <h1 class="login-title">从这里，慢慢聊。</h1>
+        <p class="login-copy">输入你的 5 位用户 ID，小奥会在这个 ID 下记住你们的对话。</p>
+        <label class="login-label" for="login-user-id">用户 ID</label>
+        <input class="login-input" id="login-user-id" name="user-id" type="text" inputmode="numeric" autocomplete="off" maxlength="5" pattern="[1-9][0-9]{4}" placeholder="例如 12345" required />
+        <button class="login-submit" id="login-submit" type="submit">进入</button>
+        <p class="login-error" id="login-error" aria-live="polite"></p>
+      </form>
+    </section>
+    <div class="shell" id="chat-shell" hidden>
       <aside>
         <div class="brand"><span class="moon" aria-hidden="true"></span><strong>小奥</strong></div>
         <p class="eyebrow">A QUIET CORNER</p>
@@ -195,6 +219,7 @@
           <span class="today" id="today"></span>
           <div class="topbar-actions">
             <button class="boundary-toggle" id="boundaries-toggle" type="button" aria-expanded="false" aria-controls="boundaries">这段对话</button>
+            <button class="boundary-toggle" id="switch-user" type="button">切换用户</button>
             <button class="clear" id="reset" type="button">开始新对话</button>
           </div>
         </header>
@@ -249,13 +274,47 @@
       const newConversationConfirm = document.querySelector('#new-conversation-confirm');
       const newConversationConfirmButton = document.querySelector('#new-conversation-confirm-button');
       const newConversationCancel = document.querySelector('#new-conversation-cancel');
-      const userId = localStorage.getItem('alf-user-id') || 'oliver';
+      const loginScreen = document.querySelector('#login-screen');
+      const loginForm = document.querySelector('#login-form');
+      const loginInput = document.querySelector('#login-user-id');
+      const loginSubmit = document.querySelector('#login-submit');
+      const loginError = document.querySelector('#login-error');
+      const chatShell = document.querySelector('#chat-shell');
+      const switchUser = document.querySelector('#switch-user');
+      const userIdPattern = /^[1-9]\d{4}$/;
+      let userId = localStorage.getItem('alf-user-id') || '';
       const proactivePreferenceKey = 'alf-proactive-enabled';
-      localStorage.setItem('alf-user-id', userId);
       document.querySelector('#today').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date());
 
       let proactive;
       let activeRequest;
+
+      function showLogin() {
+        activeRequest?.abort();
+        proactive?.close();
+        proactive = undefined;
+        loginError.textContent = '';
+        loginInput.value = '';
+        chatShell.hidden = true;
+        loginScreen.hidden = false;
+        loginInput.focus();
+      }
+
+      async function startSession(candidateId) {
+        const response = await fetch('/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: candidateId }),
+        });
+        if (!response.ok) throw new Error();
+        userId = candidateId;
+        localStorage.setItem('alf-user-id', userId);
+        messages.replaceChildren();
+        loginScreen.hidden = true;
+        chatShell.hidden = false;
+        setProactive(localStorage.getItem(proactivePreferenceKey) !== 'false');
+        input.focus();
+      }
 
       function setProactive(enabled) {
         localStorage.setItem(proactivePreferenceKey, String(enabled));
@@ -268,7 +327,29 @@
           try { addMessage(JSON.parse(event.data).text, 'assistant'); } catch (_) {}
         });
       }
-      setProactive(localStorage.getItem(proactivePreferenceKey) !== 'false');
+      loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const candidateId = loginInput.value.trim();
+        if (!userIdPattern.test(candidateId)) {
+          loginError.textContent = '请输入不以 0 开头的 5 位数字。';
+          return;
+        }
+        loginSubmit.disabled = true;
+        loginError.textContent = '';
+        try {
+          await startSession(candidateId);
+        } catch (_) {
+          loginError.textContent = '暂时无法进入，请稍后再试。';
+        } finally {
+          loginSubmit.disabled = false;
+        }
+      });
+      switchUser.addEventListener('click', showLogin);
+      if (userIdPattern.test(userId)) {
+        startSession(userId).catch(showLogin);
+      } else {
+        showLogin();
+      }
 
       function addMessage(text, role, extra = '') {
         const node = document.createElement('div');

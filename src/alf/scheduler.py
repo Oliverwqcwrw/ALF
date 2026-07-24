@@ -4,7 +4,6 @@
 调 runner.generate_proactive 生成一条主动消息, 推到 per-user 内存队列,
 HTTP SSE 端点订阅该队列推给连着网页的用户.
 
-MVP 只管 settings.alf_user_id 这一个用户; 多用户场景需扩展用户注册表.
 天气触发留 hook (需天气 API), 本模块不做.
 """
 from __future__ import annotations
@@ -15,7 +14,6 @@ import threading
 import time
 
 from . import store
-from .config import settings
 from .persona.analyzer import LOW_EMOTIONS
 
 logger = logging.getLogger(__name__)
@@ -66,7 +64,8 @@ def _loop() -> None:
     # 启动后先等一个周期, 避免进程刚起就触发.
     while not _stop.wait(CHECK_INTERVAL):
         try:
-            _check_user(settings.alf_user_id)
+            for user_id in store.get_registered_users():
+                _check_user(user_id)
         except Exception:
             logger.exception("scheduler check failed")
 
