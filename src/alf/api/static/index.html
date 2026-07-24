@@ -183,6 +183,12 @@
       localStorage.setItem('alf-user-id', userId);
       document.querySelector('#today').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date());
 
+      // 订阅小奥的主动开口 (深夜/久未对话), 收到作为小奥气泡显示.
+      const proactive = new EventSource(`/proactive/stream?user_id=${encodeURIComponent(userId)}`);
+      proactive.addEventListener('proactive', (event) => {
+        try { addMessage(JSON.parse(event.data).text, 'assistant'); } catch (_) {}
+      });
+
       function addMessage(text, role, extra = '') {
         const node = document.createElement('div');
         node.className = `message ${role} ${extra}`;

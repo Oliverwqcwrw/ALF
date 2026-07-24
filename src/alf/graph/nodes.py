@@ -125,7 +125,7 @@ def build_reply_messages(state: ConversationState) -> list:
     if recent_events and (route in ("empathize", "crisis") or state.get("proactively_care")):
         system_prompt += (
             "\n\n# TA 最近的情绪事件 (关联本轮, 看是不是同一件事再回应)\n"
-            + _format_emotion_events(recent_events)
+            + format_emotion_events(recent_events)
         )
 
     # 自检失败重试: 提示上一版的问题
@@ -200,7 +200,7 @@ def _content_to_text(content: object) -> str:
     return ""
 
 
-def _format_emotion_events(events: list) -> str:
+def format_emotion_events(events: list) -> str:
     """把近期情绪-事件格式化为注入文本, 带日期便于时序关联."""
     import time as _time
 

@@ -125,6 +125,15 @@ def consecutive_low_count(user_id: str) -> int:
     return n
 
 
+def get_last_active(user_id: str) -> float:
+    """该用户最近一条消息的时间戳 (用于久未对话判定), 无记录返回 0."""
+    row = _get_conn().execute(
+        "SELECT ts FROM messages WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+        (user_id,),
+    ).fetchone()
+    return row["ts"] if row else 0.0
+
+
 def get_impression(user_id: str) -> str:
     """读取小奥对该用户的整体印象画像 (可能为空)."""
     row = _get_conn().execute(

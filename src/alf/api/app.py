@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import logging
+import queue
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -11,11 +13,21 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..runner import chat, reset, stream
+from ..scheduler import get_proactive_queue, start_scheduler, stop_scheduler
 
-app = FastAPI(title="ALF", description="私人情感陪伴 agent 小奥")
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="ALF", description="私人情感陪伴 agent 小奥", lifespan=lifespan)
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-logger = logging.getLogger(__name__)
 
 
 class ChatRequest(BaseModel):
@@ -73,3 +85,25 @@ def stream_chat_endpoint(req: ChatRequest) -> StreamingResponse:
 def reset_endpoint(user_id: str | None = None) -> dict:
     reset(user_id=user_id)
     return {"ok": True}
+
+
+@app.get("/proactive/stream")
+def proactive_stream(user_id: str | None = None):
+    """订阅该用户的主动开口消息 (深夜/久未对话), 以 SSE 推送."""
+    uid = user_id or "default"
+    q = get_proactive_queue(uid)
+
+    def generate():
+        while True:
+            try:
+                msg = q.get(timeout=15)
+                yield f"event: proactive\ndata: {json.dumps({'text': msg}, ensure_ascii=False)}\n\n"
+            except queue.Empty:
+                # keepalive, 防止代理/浏览器因空闲断连.
+                yield ": ping\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

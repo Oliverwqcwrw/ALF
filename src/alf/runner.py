@@ -3,21 +3,40 @@ from __future__ import annotations
 
 import logging
 
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+
 from . import store
 from .config import settings
 from .graph import app_graph
 from .graph.nodes import (
     analyze_intent,
+    format_emotion_events,
     maybe_write_memory,
     retrieve_memories,
     stream_reply,
     update_impression,
 )
+from .persona import PROACTIVE_MESSAGE_PROMPT
 
 logger = logging.getLogger(__name__)
 
 # 进入本轮前连续低落达到该轮数 → 触发主动关怀.
 PROACTIVE_CARE_THRESHOLD = 2
+
+_proactive_llm: ChatOpenAI | None = None
+
+
+def _get_proactive_llm() -> ChatOpenAI:
+    global _proactive_llm
+    if _proactive_llm is None:
+        _proactive_llm = ChatOpenAI(
+            model=settings.chat_model,
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            temperature=0.85,
+        )
+    return _proactive_llm
 
 
 def _load_state(user_id: str, user_message: str) -> dict:
@@ -67,6 +86,44 @@ def chat(user_message: str, user_id: str | None = None) -> str:
 def reset(user_id: str | None = None) -> None:
     uid = user_id or settings.alf_user_id
     store.clear_history(uid)
+
+
+def generate_proactive(user_id: str, reason: str) -> str | None:
+    """生成一条主动开口消息 (深夜/久未对话触发). 不走完整 graph.
+
+    没有用户消息, 不经 analyze_intent/self_check; 只加载印象/近期事件,
+    用主动开口 prompt + 主 LLM 生成一条朋友式主动消息.
+    """
+    uid = user_id or settings.alf_user_id
+    impression = store.get_impression(uid)
+    recent_events = store.get_recent_emotion_events(uid)
+    history = store.get_history(uid)
+
+    system_prompt = PROACTIVE_MESSAGE_PROMPT.format(
+        alf_agent_name=settings.alf_agent_name,
+        alf_user_id=settings.alf_user_id,
+        reason=reason,
+        impression=impression or "(还没印象)",
+        recent_events=format_emotion_events(recent_events),
+    )
+
+    lc_messages: list = [SystemMessage(content=system_prompt)]
+    # 附最近几轮对话, 让主动消息能呼应近期上下文.
+    for m in history[-4:]:
+        if m.get("role") == "user":
+            lc_messages.append(HumanMessage(content=m["content"]))
+        elif m.get("role") == "assistant":
+            lc_messages.append(AIMessage(content=m["content"]))
+
+    try:
+        from .graph.nodes import _content_to_text
+
+        resp = _get_proactive_llm().invoke(lc_messages)
+        text = _content_to_text(resp.content).strip()
+        return text or None
+    except Exception as e:  # noqa: BLE001
+        logger.warning("generate_proactive failed: %s", e)
+        return None
 
 
 def stream(user_message: str, user_id: str | None = None):

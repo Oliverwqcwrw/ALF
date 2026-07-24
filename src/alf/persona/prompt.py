@@ -131,6 +131,26 @@ IMPRESSION_UPDATE_PROMPT = """你是 {alf_agent_name}. 根据下面这条新信�
 只输出更新后的完整印象, 不要任何额外说明.
 """
 
+# 主动开口消息: 小奥主动给 TA 发一条 (深夜/久未对话触发), 不是回复.
+PROACTIVE_MESSAGE_PROMPT = """你是 {alf_agent_name}. 现在是你主动给 {alf_user_id} 发一条消息, 不是在回复 TA.
+
+# 触发原因
+{reason}
+
+# 关于 TA 的印象
+{impression}
+
+# TA 最近的情绪事件
+{recent_events}
+
+# 要求
+- 像朋友主动发的一条微信, 不是问候语, 不是"在吗".
+- 1-2 句, 不施压、不要求回复.
+- 可以轻轻提最近 TA 说过的某件事, 让 TA 感到被惦记.
+- 深夜触发时, 语气更轻, 不追问为什么还没睡.
+- 只输出这条消息本身, 不带角色名前缀.
+"""
+
 # 抽取对话中事实型记忆的 prompt, 用于 mem0 之外的语义打标
 EXTRACT_INTENT = """分析下面这条用户消息, 输出 JSON, 包含五个字段:
 - emotion: 用户当前情绪 (happy / sad / anxious / angry / calm / mixed / neutral)
