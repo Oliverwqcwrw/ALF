@@ -7,12 +7,12 @@ import queue
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from ..runner import chat, reset, stream
+from ..runner import chat, forget_everything, forget_memory, get_memories, reset, stream
 from ..scheduler import get_proactive_queue, start_scheduler, stop_scheduler
 
 logger = logging.getLogger(__name__)
@@ -84,6 +84,32 @@ def stream_chat_endpoint(req: ChatRequest) -> StreamingResponse:
 @app.post("/reset")
 def reset_endpoint(user_id: str | None = None) -> dict:
     reset(user_id=user_id)
+    return {"ok": True}
+
+
+@app.get("/memories")
+def memories_endpoint(user_id: str | None = None) -> dict:
+    """用户可见的长期记忆清单。"""
+    memories = get_memories(user_id=user_id)
+    return {
+        "memories": [
+            {"id": str(item.get("id", "")), "text": item.get("memory") or item.get("text") or ""}
+            for item in memories
+            if item.get("id") and (item.get("memory") or item.get("text"))
+        ]
+    }
+
+
+@app.delete("/memories/{memory_id}")
+def forget_memory_endpoint(memory_id: str, user_id: str | None = None) -> dict:
+    if not forget_memory(memory_id, user_id=user_id):
+        raise HTTPException(status_code=404, detail="没有找到这条记忆")
+    return {"ok": True}
+
+
+@app.delete("/memory")
+def forget_everything_endpoint(user_id: str | None = None) -> dict:
+    forget_everything(user_id=user_id)
     return {"ok": True}
 
 

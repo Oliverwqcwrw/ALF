@@ -91,6 +91,14 @@ def clear_history(user_id: str) -> None:
         _get_conn().commit()
 
 
+def clear_personal_context(user_id: str) -> None:
+    """删除 SQLite 中与用户有关的画像和情绪事件。"""
+    with _lock:
+        for table in ("impressions", "emotion_events"):
+            _get_conn().execute(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))
+        _get_conn().commit()
+
+
 def get_emotion_history(user_id: str, limit: int = _EMOTION_LIMIT) -> list[str]:
     rows = _get_conn().execute(
         "SELECT emotion FROM emotions WHERE user_id = ? ORDER BY id DESC LIMIT ?",

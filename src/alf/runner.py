@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from . import store
+from .memory import store as memory_store
 from .config import settings
 from .graph import app_graph
 from .graph.nodes import (
@@ -86,6 +87,33 @@ def chat(user_message: str, user_id: str | None = None) -> str:
 def reset(user_id: str | None = None) -> None:
     uid = user_id or settings.alf_user_id
     store.clear_history(uid)
+
+
+def get_memories(user_id: str | None = None) -> list[dict]:
+    """返回小奥为该用户保存的长期记忆，供用户查看与管理。"""
+    uid = user_id or settings.alf_user_id
+    return memory_store.get_all_memories(uid)
+
+
+def forget_memory(memory_id: str, user_id: str | None = None) -> bool:
+    """仅删除属于该用户的一条长期记忆。"""
+    uid = user_id or settings.alf_user_id
+    memories = memory_store.get_all_memories(uid)
+    if not any(str(memory.get("id")) == memory_id for memory in memories):
+        return False
+    memory_store.delete_memory(memory_id)
+    return True
+
+
+def forget_everything(user_id: str | None = None) -> None:
+    """清除小奥为用户保留的全部本地状态和长期记忆。"""
+    uid = user_id or settings.alf_user_id
+    for memory in memory_store.get_all_memories(uid):
+        memory_id = memory.get("id")
+        if memory_id:
+            memory_store.delete_memory(str(memory_id))
+    store.clear_history(uid)
+    store.clear_personal_context(uid)
 
 
 def generate_proactive(user_id: str, reason: str) -> str | None:

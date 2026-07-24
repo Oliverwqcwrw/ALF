@@ -97,8 +97,9 @@
       .status { margin-top: auto; display: flex; align-items: center; gap: 8px; color: #dce4d8; font-size: 12px; }
       .dot { width: 8px; height: 8px; border-radius: 50%; background: #9bcd9e; box-shadow: 0 0 0 5px rgba(155, 205, 158, 0.11); }
       main { display: flex; min-height: 690px; flex-direction: column; background: var(--paper); }
-      .topbar { display: flex; align-items: center; justify-content: space-between; padding: 24px 30px 18px; border-bottom: 1px solid var(--line); }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 30px 18px; border-bottom: 1px solid var(--line); }
       .today { color: var(--muted); font-size: 12px; letter-spacing: 0.07em; }
+      .topbar-actions { display: flex; align-items: center; gap: 18px; }
       .clear {
         padding: 7px 0;
         color: var(--muted);
@@ -111,6 +112,26 @@
         transition: color 160ms ease;
       }
       .clear:hover { color: var(--clay); }
+      .boundary-toggle { padding: 7px 0; color: var(--ink); border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+      .boundary-toggle:hover { color: var(--clay); }
+      .boundaries { overflow: hidden; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--mist) 29%, var(--paper)); }
+      .boundaries[hidden] { display: none; }
+      .boundaries-inner { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(230px, 0.85fr); gap: 28px; padding: 22px 30px 24px; animation: rise 260ms both; }
+      .boundary-kicker { margin: 0 0 6px; color: var(--muted); font-size: 11px; letter-spacing: 0.12em; }
+      .boundary-copy { max-width: 52ch; margin: 0; font-size: 13px; line-height: 1.75; }
+      .boundary-actions { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+      .quiet-button { padding: 8px 11px; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; background: rgba(252, 249, 241, 0.55); cursor: pointer; font: inherit; font-size: 12px; transition: transform 160ms ease, background 160ms ease; }
+      .quiet-button:hover { background: var(--paper-soft); transform: translateY(-1px); }
+      .quiet-button:active { transform: translateY(0); }
+      .quiet-button.danger { color: #843a31; border-color: rgba(132, 58, 49, 0.35); }
+      .memory-list { grid-column: 1 / -1; display: grid; gap: 8px; }
+      .memory-list:empty { display: none; }
+      .memory-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-top: 1px solid rgba(24, 63, 58, 0.12); font-size: 13px; line-height: 1.55; }
+      .memory-item button { flex: none; padding: 3px 0; color: var(--muted); border: 0; border-bottom: 1px solid currentColor; background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
+      .memory-empty { color: var(--muted); font-size: 13px; }
+      .boundary-confirm { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 2px; color: #843a31; font-size: 12px; }
+      .new-conversation-confirm { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 12px 30px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--paper-soft); font-size: 12px; }
+      .new-conversation-confirm[hidden] { display: none; }
       #messages { flex: 1; padding: 32px 30px 24px; overflow-y: auto; scroll-behavior: smooth; }
       .welcome { max-width: 520px; padding: 24px; border: 1px solid var(--line); border-radius: 2px 18px 18px 18px; background: var(--paper-soft); animation: rise 500ms both; }
       .welcome small { display: block; margin-bottom: 12px; color: var(--clay); font-size: 11px; letter-spacing: 0.16em; }
@@ -120,7 +141,8 @@
       .message.assistant { border: 1px solid var(--line); border-radius: 2px 18px 18px 18px; background: var(--paper-soft); }
       .message.error { color: #9c332e; border-color: rgba(156, 51, 46, 0.35); }
       .message.streaming::after { content: ""; display: inline-block; width: 6px; height: 1em; margin-left: 4px; vertical-align: -0.16em; background: var(--clay); animation: blink 800ms step-end infinite; }
-      form { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 20px 30px 28px; border-top: 1px solid var(--line); }
+      .input-context { padding: 0 30px 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+      form { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 14px 30px 28px; border-top: 1px solid var(--line); }
       textarea {
         min-height: 54px;
         max-height: 150px;
@@ -140,6 +162,9 @@
       .send { align-self: end; min-width: 78px; min-height: 54px; padding: 0 18px; color: var(--paper); border: 0; border-radius: 14px; background: var(--clay); box-shadow: 0 8px 18px rgba(216, 120, 85, 0.24); cursor: pointer; font: inherit; transition: transform 160ms ease, background 160ms ease; }
       .send:hover { background: #c86443; transform: translateY(-2px); }
       .send:disabled { cursor: wait; opacity: 0.65; transform: none; }
+      .abort { display: none; align-self: end; min-height: 54px; padding: 0 4px; color: var(--muted); border: 0; background: transparent; cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+      .abort.visible { display: block; }
+      button:focus-visible, textarea:focus-visible { outline: 3px solid rgba(216, 120, 85, 0.38); outline-offset: 3px; }
       @keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes blink { 50% { opacity: 0; } }
       @media (max-width: 720px) {
@@ -149,8 +174,14 @@
         h1 { max-width: none; font-size: 29px; }
         .side-copy, .status { display: none; }
         main { min-height: calc(100vh - 170px); }
-        .topbar, #messages, form { padding-left: 20px; padding-right: 20px; }
+        .topbar, #messages, form, .input-context { padding-left: 20px; padding-right: 20px; }
+        .boundaries-inner { grid-template-columns: 1fr; gap: 18px; padding: 20px; }
+        .new-conversation-confirm { justify-content: flex-start; padding-left: 20px; padding-right: 20px; }
+        .topbar-actions { gap: 14px; }
+        form { grid-template-columns: 1fr auto; }
+        .abort { grid-column: 1 / -1; justify-self: start; min-height: auto; }
       }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 1ms !important; transition-duration: 1ms !important; } }
     </style>
   </head>
   <body>
@@ -160,16 +191,48 @@
         <p class="eyebrow">A QUIET CORNER</p>
         <h1>有些话，慢慢说。</h1>
         <p class="side-copy">不用组织得很好。今天的情绪、琐事，或者一句“我在”，都可以留在这里。</p>
-        <div class="status"><span class="dot" aria-hidden="true"></span>小奥在这儿</div>
+        <div class="status"><span class="dot" aria-hidden="true"></span>这段对话，只在这里继续</div>
       </aside>
       <main>
-        <header class="topbar"><span class="today" id="today"></span><button class="clear" id="reset" type="button">重新开始</button></header>
+        <header class="topbar">
+          <span class="today" id="today"></span>
+          <div class="topbar-actions">
+            <button class="boundary-toggle" id="boundaries-toggle" type="button" aria-expanded="false" aria-controls="boundaries">这段对话</button>
+            <button class="clear" id="reset" type="button">开始新对话</button>
+          </div>
+        </header>
+        <div class="new-conversation-confirm" id="new-conversation-confirm" hidden>
+          <span>会清除近期聊天记录和情绪轨迹；已保存的长期记忆会保留。</span>
+          <button class="quiet-button" id="new-conversation-confirm-button" type="button">开始新对话</button>
+          <button class="quiet-button" id="new-conversation-cancel" type="button">先不清除</button>
+        </div>
+        <section class="boundaries" id="boundaries" hidden aria-label="对话边界与记忆管理">
+          <div class="boundaries-inner">
+            <div>
+              <p class="boundary-kicker">我会记得什么</p>
+              <p class="boundary-copy">近期对话会帮小奥接住上下文。重要的偏好或经历可能会被整理成长期记忆，用在之后的聊天里。你可以在这里查看、删掉，或彻底清除它们。</p>
+            </div>
+            <div class="boundary-actions">
+              <button class="quiet-button" id="load-memories" type="button">查看我记得的事</button>
+              <button class="quiet-button" id="proactive-toggle" type="button">关闭本设备主动问候</button>
+              <button class="quiet-button danger" id="forget-all" type="button">清除所有记忆</button>
+            </div>
+            <div class="memory-list" id="memory-list" aria-live="polite"></div>
+            <div class="boundary-confirm" id="forget-confirm" hidden>
+              <span>这会删除近期对话、情绪记录和已保存的记忆，无法撤销。</span>
+              <button class="quiet-button danger" id="forget-confirm-button" type="button">确认全部清除</button>
+              <button class="quiet-button" id="forget-cancel" type="button">保留它们</button>
+            </div>
+          </div>
+        </section>
         <section id="messages" aria-live="polite">
           <div class="welcome"><small>今晚的第一句话</small><p>嗨，Oliver。今天想从哪一件小事开始聊？</p></div>
         </section>
+        <div class="input-context">按 Enter 发送，Shift + Enter 换行。你随时可以停下，不必把话说完整。</div>
         <form id="chat-form">
           <textarea id="message" rows="1" maxlength="2000" placeholder="写下你现在想说的话…" aria-label="消息内容"></textarea>
           <button class="send" id="send" type="submit">发送</button>
+          <button class="abort" id="abort" type="button">先停一下</button>
         </form>
       </main>
     </div>
@@ -179,15 +242,39 @@
       const input = document.querySelector('#message');
       const send = document.querySelector('#send');
       const reset = document.querySelector('#reset');
+      const abort = document.querySelector('#abort');
+      const boundaries = document.querySelector('#boundaries');
+      const boundariesToggle = document.querySelector('#boundaries-toggle');
+      const loadMemories = document.querySelector('#load-memories');
+      const memoryList = document.querySelector('#memory-list');
+      const proactiveToggle = document.querySelector('#proactive-toggle');
+      const forgetAll = document.querySelector('#forget-all');
+      const forgetConfirm = document.querySelector('#forget-confirm');
+      const forgetConfirmButton = document.querySelector('#forget-confirm-button');
+      const forgetCancel = document.querySelector('#forget-cancel');
+      const newConversationConfirm = document.querySelector('#new-conversation-confirm');
+      const newConversationConfirmButton = document.querySelector('#new-conversation-confirm-button');
+      const newConversationCancel = document.querySelector('#new-conversation-cancel');
       const userId = localStorage.getItem('alf-user-id') || 'oliver';
+      const proactivePreferenceKey = 'alf-proactive-enabled';
       localStorage.setItem('alf-user-id', userId);
       document.querySelector('#today').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date());
 
-      // 订阅小奥的主动开口 (深夜/久未对话), 收到作为小奥气泡显示.
-      const proactive = new EventSource(`/proactive/stream?user_id=${encodeURIComponent(userId)}`);
-      proactive.addEventListener('proactive', (event) => {
-        try { addMessage(JSON.parse(event.data).text, 'assistant'); } catch (_) {}
-      });
+      let proactive;
+      let activeRequest;
+
+      function setProactive(enabled) {
+        localStorage.setItem(proactivePreferenceKey, String(enabled));
+        proactive?.close();
+        proactive = undefined;
+        proactiveToggle.textContent = enabled ? '关闭本设备主动问候' : '开启本设备主动问候';
+        if (!enabled) return;
+        proactive = new EventSource(`/proactive/stream?user_id=${encodeURIComponent(userId)}`);
+        proactive.addEventListener('proactive', (event) => {
+          try { addMessage(JSON.parse(event.data).text, 'assistant'); } catch (_) {}
+        });
+      }
+      setProactive(localStorage.getItem(proactivePreferenceKey) !== 'false');
 
       function addMessage(text, role, extra = '') {
         const node = document.createElement('div');
@@ -200,6 +287,74 @@
       function resize() { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 150)}px`; }
       input.addEventListener('input', resize);
       input.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } });
+      boundariesToggle.addEventListener('click', () => {
+        const isOpen = !boundaries.hidden;
+        boundaries.hidden = isOpen;
+        boundariesToggle.setAttribute('aria-expanded', String(!isOpen));
+      });
+      proactiveToggle.addEventListener('click', () => setProactive(!proactive));
+
+      function renderMemories(memories) {
+        memoryList.replaceChildren();
+        if (!memories.length) {
+          const empty = document.createElement('p');
+          empty.className = 'memory-empty';
+          empty.textContent = '现在还没有保存的长期记忆。';
+          memoryList.append(empty);
+          return;
+        }
+        for (const memory of memories) {
+          const item = document.createElement('div');
+          item.className = 'memory-item';
+          const text = document.createElement('span');
+          text.textContent = memory.text;
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.textContent = '忘掉这条';
+          remove.addEventListener('click', async () => {
+            await fetch(`/memories/${encodeURIComponent(memory.id)}?user_id=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+            loadSavedMemories();
+          });
+          item.append(text, remove);
+          memoryList.append(item);
+        }
+      }
+
+      async function loadSavedMemories() {
+        loadMemories.disabled = true;
+        loadMemories.textContent = '正在查看…';
+        try {
+          const response = await fetch(`/memories?user_id=${encodeURIComponent(userId)}`);
+          if (!response.ok) throw new Error();
+          renderMemories((await response.json()).memories || []);
+        } catch (_) {
+          memoryList.replaceChildren();
+          const error = document.createElement('p');
+          error.className = 'memory-empty';
+          error.textContent = '现在还看不到记忆。稍后再试一次就好。';
+          memoryList.append(error);
+        } finally {
+          loadMemories.disabled = false;
+          loadMemories.textContent = '查看我记得的事';
+        }
+      }
+      loadMemories.addEventListener('click', loadSavedMemories);
+      forgetAll.addEventListener('click', () => { forgetConfirm.hidden = false; });
+      forgetCancel.addEventListener('click', () => { forgetConfirm.hidden = true; });
+      forgetConfirmButton.addEventListener('click', async () => {
+        forgetConfirmButton.disabled = true;
+        try {
+          const response = await fetch(`/memory?user_id=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+          if (!response.ok) throw new Error();
+          messages.innerHTML = '<div class="welcome"><small>重新认识</small><p>好，我们从这里重新开始。此刻你想说什么？</p></div>';
+          memoryList.replaceChildren();
+          forgetConfirm.hidden = true;
+        } catch (_) {
+          forgetConfirmButton.textContent = '暂时没能清除，请再试一次';
+        } finally {
+          forgetConfirmButton.disabled = false;
+        }
+      });
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -210,9 +365,11 @@
         resize();
         send.disabled = true;
         send.textContent = '听着呢…';
+        abort.classList.add('visible');
+        activeRequest = new AbortController();
         const pending = addMessage('小奥正在想怎么接住这句话。', 'assistant', 'streaming');
         try {
-          const response = await fetch('/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, user_id: userId }) });
+          const response = await fetch('/chat/stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, user_id: userId }), signal: activeRequest.signal });
           if (!response.ok) throw new Error(`请求失败 (${response.status})`);
           if (!response.body) throw new Error('浏览器不支持流式响应');
           const reader = response.body.getReader();
@@ -244,18 +401,30 @@
           }
           if (!started) pending.textContent = '我刚刚走神了一下，你可以再说一次吗？';
         } catch (error) {
-          pending.textContent = `没有连上小奥：${error.message}`;
+          pending.textContent = error.name === 'AbortError' ? '好，这一次先停在这里。' : '刚刚没能接上。你的这句话还在，愿意的话可以再发一次。';
           pending.classList.add('error');
         } finally {
+          activeRequest = undefined;
           pending.classList.remove('streaming');
           send.disabled = false;
           send.textContent = '发送';
+          abort.classList.remove('visible');
           input.focus();
         }
       });
-      reset.addEventListener('click', async () => {
-        await fetch(`/reset?user_id=${encodeURIComponent(userId)}`, { method: 'POST' });
-        messages.innerHTML = '<div class="welcome"><small>新的页码</small><p>好，我们从这里重新开始。此刻你想说什么？</p></div>';
+      abort.addEventListener('click', () => activeRequest?.abort());
+      reset.addEventListener('click', () => { newConversationConfirm.hidden = false; });
+      newConversationCancel.addEventListener('click', () => { newConversationConfirm.hidden = true; });
+      newConversationConfirmButton.addEventListener('click', async () => {
+        newConversationConfirmButton.disabled = true;
+        const response = await fetch(`/reset?user_id=${encodeURIComponent(userId)}`, { method: 'POST' });
+        if (response.ok) {
+          messages.innerHTML = '<div class="welcome"><small>新的页码</small><p>好，我们从这里重新开始。此刻你想说什么？</p></div>';
+          newConversationConfirm.hidden = true;
+        } else {
+          newConversationConfirmButton.textContent = '暂时没能开始，请再试一次';
+        }
+        newConversationConfirmButton.disabled = false;
         input.focus();
       });
     </script>
